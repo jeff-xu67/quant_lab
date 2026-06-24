@@ -5,6 +5,7 @@ from typing import Optional
 
 import duckdb
 import pandas as pd
+import polars as pl
 
 
 class QuantLabDB:
@@ -64,6 +65,10 @@ class QuantLabDB:
 
         total_rows = 0
         for file_path in files:
+            cols = pd.read_csv(file_path, nrows=0).columns
+            if "trade_date" not in cols:
+                print(f"跳过非日线CSV: {file_path.name}")
+                continue
             total_rows += self.import_one_csv(file_path)
         return total_rows
 
@@ -148,7 +153,7 @@ class QuantLabDB:
                 exchange = EXCLUDED.exchange,
                 fund_category = EXCLUDED.fund_category,
                 source_file = EXCLUDED.source_file,
-                load_time = CURRENT_TIMESTAMP
+                load_time = now()
             """
         )
         self.conn.unregister("tmp_etf_df")
@@ -192,3 +197,42 @@ class QuantLabDB:
     def query(self, sql: str) -> pd.DataFrame:
         """保留原生SQL能力，便于研究实验。"""
         return self.conn.execute(sql).fetch_df()
+
+    # ---- Polars-native methods ----
+
+    def get_etf_daily_pl(
+        self,
+        ts_code: str | list[str],
+        start_date: str | None = None,
+        end_date: str | None = None,
+        columns: list[str] | None = None,
+    ) -> pl.DataFrame:
+        """Polars查询，通过Arrow零拷贝传输。"""
+        col_clause = ", ".join(columns) if columns else "*"
+
+        if isinstance(ts_code, str):
+            ts_code = [ts_code]
+
+        placeholders = ", ".join(["?"] * len(ts_code))
+        sql = f"SELECT {col_clause} FROM etf_daily WHERE ts_code IN ({placeholders})"
+        params: list[object] = list(ts_code)
+
+        if start_date:
+            sql += " AND trade_date >= ?"
+            params.append(start_date)
+        if end_date:
+            sql += " AND trade_date <= ?"
+            params.append(end_date)
+
+        sql += " ORDER BY ts_code, trade_date"
+        arrow_table = self.conn.execute(sql, params).fetch_arrow_table()
+        return pl.from_arrow(arrow_table)
+
+    def get_universe_pl(
+        self,
+        symbols: list[str],
+        start_date: str,
+        end_date: str,
+    ) -> pl.DataFrame:
+        """批量获取多个标的的数据。"""
+        return self.get_etf_daily_pl(symbols, start_date, end_date)

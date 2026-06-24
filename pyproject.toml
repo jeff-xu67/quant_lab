@@ -1,0 +1,41 @@
+[project]
+name = "quant-lab"
+version = "0.2.0"
+description = "ETF quantitative trading lab with event-driven backtesting"
+requires-python = ">=3.11"
+dependencies = [
+    "duckdb>=1.0.0",
+    "pandas>=2.0.0",
+    "polars>=1.0.0",
+    "numpy>=1.24.0",
+    "plotly>=5.18.0",
+    "pyyaml>=6.0",
+    "pyarrow>=14.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "ruff",
+]
+talib = [
+    "TA-Lib>=0.4.28",
+]
+
+[project.scripts]
+quant-lab = "quant_lab.experiment.runner:main"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

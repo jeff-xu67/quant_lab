@@ -1,0 +1,40 @@
+backtest:
+  start_date: "2020-01-01"
+  end_date: "2024-12-31"
+  initial_cash: 1000000.0
+  benchmark: "510300.SH"
+
+universe:
+  mode: static
+  symbols:
+    - "510300.SH"
+    - "510500.SH"
+    - "159915.SZ"
+    - "518880.SH"
+    - "510050.SH"
+    - "159920.SZ"
+    - "510050.SH"
+
+strategy:
+  name: MomentumRotation
+  params:
+    lookback: 20
+    top_k: 3
+    rebalance_days: 20
+
+execution:
+  commission_rate: 0.0003
+  slippage_model: fixed
+  slippage_bps: 5.0
+  fill_on_next_open: true
+
+portfolio:
+  position_sizing: equal_weight
+  max_position_pct: 0.30
+
+metrics:
+  risk_free_rate: 0.02
+  trading_days_per_year: 242
+
+logging:
+  level: INFO
